@@ -12,6 +12,8 @@ flask-cors = "*"
 python-dotenv = "*"
 psycopg2-binary = "*"
 flask-sqlalchemy = "*"
+marshmallow = "*"
+marshmallow-sqlalchemy = "*"
 
 [dev-packages]
 

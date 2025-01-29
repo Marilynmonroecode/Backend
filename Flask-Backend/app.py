@@ -18,8 +18,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Initialize extensions
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-CORS(app, origins=["http://localhost:3005"])
-
+CORS(app)
 
 # Models
 class Task(db.Model):
@@ -52,25 +51,31 @@ def add_task():
         # Get data from request body
         data = request.get_json()
 
+        # Print incoming request data for debugging
+        print(f"Received data: {data}")
+
         # Ensure the data has necessary fields
         if 'title' not in data or 'description' not in data:
             return jsonify({'error': 'Title and description are required'}), 400
 
-        # Create new task
-        tasks = []
-        new_task = {
-            'id': len(tasks) + 1,
-            'title': data['title'],
-            'description': data['description'],
-            'done': data.get('done', False)  # Default to False if not provided
-        }
+        # Create new task and add it to the database
+        new_task = Task(
+            title=data['title'],
+            description=data['description'],
+            done=data.get('done', False)  # Default to False if not provided
+        )
+        
+        db.session.add(new_task)
+        db.session.commit()
 
-        # Append the new task
-        tasks.append(new_task)
+        # Print the task after it's added to the database for debugging
+        print(f"Created task: {new_task.to_dict()}")
 
-        # Return the newly added task as JSON
-        return jsonify(new_task), 201
+        # Return the newly added task as JSON with a 200 status code
+        return jsonify(new_task.to_dict()), 200
+
     except Exception as e:
+        # Print the error message
         print(f"Error adding task: {e}")
         return jsonify({'error': 'Internal Server Error'}), 500
 
@@ -78,17 +83,18 @@ def add_task():
 def get_task(id):
     task = Task.query.get(id)
     if task is None:
-        return jsonify({"error": "Task not found"}), 400
+        return jsonify({"error": "Task not found"}), 404
     return jsonify(task.to_dict())
 
 @app.route('/tasks/<int:id>', methods=['PUT'])
 def update_task(id):
     task = Task.query.get(id)
     if task is None:
-        return jsonify({"error": "Task not found"}), 400
+        return jsonify({"error": "Task not found"}), 404
         
     data = request.get_json()
     
+    # Update task fields
     task.title = data.get('title', task.title)
     task.description = data.get('description', task.description)
     task.done = data.get('done', task.done)
@@ -101,12 +107,12 @@ def update_task(id):
 def delete_task(id):
     task = Task.query.get(id)
     if task is None:
-        return jsonify({"error": "Task not found"}), 400
+        return jsonify({"error": "Task not found"}), 404
         
     db.session.delete(task)
     db.session.commit()
     
-    return '', 200
+    return '', 204  # Return No Content status on successful deletion
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5005)
+    app.run(debug=True, port=5001)
